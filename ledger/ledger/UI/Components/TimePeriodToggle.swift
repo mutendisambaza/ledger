@@ -75,6 +75,8 @@ private struct PeriodButton: View {
                 .scaleEffect(isPressed ? 0.95 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityLabel("\(period.rawValue) period")
+        .accessibilityValue(isSelected ? "Selected" : "Not selected")
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in

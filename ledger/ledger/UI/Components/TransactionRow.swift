@@ -32,6 +32,16 @@ struct TransactionRow: View {
                 appeared = true
             }
         }
+        .accessibilityLabel("\(transaction.merchant), \(formattedAmount), \(relativeTime)")
+    }
+
+    private var formattedAmount: String {
+        String(format: "$%.2f", Double(transaction.amountCents) / 100.0)
+    }
+
+    private var relativeTime: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: transaction.timestamp, relativeTo: Date())
     }
 }
-

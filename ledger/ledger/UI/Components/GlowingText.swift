@@ -87,6 +87,8 @@ struct AmountDisplay: View {
             glowColor: glowColor,
             isPulsing: isPulsing
         )
+        .accessibilityLabel("Total spent: \(formattedAmount)")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 

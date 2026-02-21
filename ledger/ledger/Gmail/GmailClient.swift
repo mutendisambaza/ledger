@@ -7,6 +7,14 @@
 
 import Foundation
 
+struct GmailSyncResult: Sendable {
+    let fetched: Int
+    let parsed: Int
+    let inserted: Int
+    let skipped: Int
+    let errors: [String]
+}
+
 final class GmailClient {
     private let authManager: GoogleAuthManager
     private let baseURL = "https://gmail.googleapis.com/gmail/v1"
@@ -75,27 +83,65 @@ final class GmailClient {
         return try JSONDecoder().decode(GmailMessage.self, from: data)
     }
     
-    func getRecentReceipts() async throws -> [GmailMessage] {
+    /// Fetches recent receipt-like Gmail messages and per-fetch sync metadata.
+    /// - Parameters:
+    ///   - fetchWindowDays: Number of days to search backward, clamped to 1...30.
+    ///   - maxResults: Maximum number of messages to request from Gmail.
+    /// - Returns: A tuple of fetched messages and sync summary.
+    func getRecentReceipts(fetchWindowDays: Int = 1, maxResults: Int = 50) async throws -> ([GmailMessage], GmailSyncResult) {
+        let window = min(max(fetchWindowDays, 1), 30)
         let receiptQuery = """
-        newer_than:1d (subject:receipt OR subject:order OR subject:invoice 
-        OR subject:payment OR subject:confirmation OR subject:charged 
-        OR subject:paid OR subject:purchase OR from:receipts)
+        newer_than:\(window)d subject:(receipt OR order OR invoice OR "your purchase" OR "payment confirmation" OR "thank you for your order")
         """
-        
-        let messageRefs = try await listMessages(query: receiptQuery, maxResults: 50)
-        
+
+        let messageRefs = try await listMessages(query: receiptQuery, maxResults: maxResults)
+
         var messages: [GmailMessage] = []
+        var errors: [String] = []
+        var skipped = 0
+
         for ref in messageRefs {
             do {
-                let message = try await getMessage(id: ref.id)
+                let message = try await getMessageWithRetry(id: ref.id)
                 messages.append(message)
             } catch {
-                // Log error but continue with other messages
-                print("Failed to fetch message \(ref.id): \(error)")
+                skipped += 1
+                let errorMessage = "Failed to fetch message \(ref.id): \(error.localizedDescription)"
+                errors.append(errorMessage)
+                print(errorMessage)
             }
         }
-        
-        return messages
+
+        let result = GmailSyncResult(
+            fetched: messages.count,
+            parsed: 0,
+            inserted: 0,
+            skipped: skipped,
+            errors: errors
+        )
+        return (messages, result)
+    }
+
+    private func getMessageWithRetry(id: String, maxRetries: Int = 2) async throws -> GmailMessage {
+        var attempt = 0
+        var lastError: Error?
+
+        while attempt <= maxRetries {
+            do {
+                return try await getMessage(id: id)
+            } catch {
+                lastError = error
+                if attempt == maxRetries {
+                    break
+                }
+
+                let backoffSeconds = pow(2.0, Double(attempt)) * 0.5
+                try? await Task.sleep(for: .seconds(backoffSeconds))
+            }
+            attempt += 1
+        }
+
+        throw lastError ?? GmailError.invalidResponse
     }
 }
 
@@ -123,4 +169,3 @@ enum GmailError: Error {
         }
     }
 }
-

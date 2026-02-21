@@ -129,6 +129,7 @@ struct CalendarView: View {
                                     }
                                 }
                             )
+                            .accessibilityLabel(calendarAccessibilityLabel(for: date))
                             .frame(maxWidth: .infinity)
                         } else {
                             CalendarNode(
@@ -232,6 +233,12 @@ struct CalendarView: View {
     private func formatCents(_ cents: Int) -> String {
         let dollars = Double(cents) / 100.0
         return String(format: "$%.2f", dollars)
+    }
+
+    private func calendarAccessibilityLabel(for date: Date) -> String {
+        let totalCents = limitManager.getTotalForDay(date: date, transactions: ledgerStore.transactions)
+        let overLimit = limitManager.isDayOverLimit(date: date, transactions: ledgerStore.transactions)
+        return "\(formatDate(date)), \(overLimit ? "over limit" : "within limit"), \(formatCents(totalCents)) spent"
     }
 }
 

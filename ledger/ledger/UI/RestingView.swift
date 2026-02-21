@@ -30,6 +30,8 @@ struct RestingView: View {
                         glowColor: DesignSystem.Colors.sageGreen,
                         isPulsing: true
                     )
+                    .accessibilityLabel("Today's spending: \(formattedAmount(store.getTodayTotal()))")
+                    .accessibilityAddTraits(.updatesFrequently)
                 } else {
                     PlaceholderAmount(size: .hero)
                 }
@@ -53,6 +55,12 @@ struct RestingView: View {
                 appeared = true
             }
         }
+    }
+}
+
+private extension RestingView {
+    func formattedAmount(_ cents: Int) -> String {
+        String(format: "$%.2f", Double(cents) / 100.0)
     }
 }
 
