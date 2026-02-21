@@ -12,6 +12,7 @@
 		651E7C622F230149003B339A /* LedgerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 651E7C552F230146003B339A /* LedgerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		651E7CB72F272D52003B339A /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 651E7CB62F272D52003B339A /* GoogleSignIn */; };
 		651E7CB92F272D52003B339A /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 651E7CB82F272D52003B339A /* GoogleSignInSwift */; };
+		651E7D012F30000003B339A /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 651E7D032F30000203B339A /* Supabase */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -115,6 +116,7 @@
 			files = (
 				651E7CB72F272D52003B339A /* GoogleSignIn in Frameworks */,
 				651E7CB92F272D52003B339A /* GoogleSignInSwift in Frameworks */,
+				651E7D012F30000003B339A /* Supabase in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -201,6 +203,7 @@
 			packageProductDependencies = (
 				651E7CB62F272D52003B339A /* GoogleSignIn */,
 				651E7CB82F272D52003B339A /* GoogleSignInSwift */,
+				651E7D032F30000203B339A /* Supabase */,
 			);
 			productName = ledger;
 			productReference = 651E7BF42F22F65D003B339A /* ledger.app */;
@@ -311,6 +314,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				651E7CB02F272694003B339A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				651E7D022F30000103B339A /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 651E7BF52F22F65D003B339A /* Products */;
@@ -844,6 +848,14 @@
 				minimumVersion = 9.1.0;
 			};
 		};
+		651E7D022F30000103B339A /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -856,6 +868,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 651E7CB02F272694003B339A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
+		};
+		651E7D032F30000203B339A /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 651E7D022F30000103B339A /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

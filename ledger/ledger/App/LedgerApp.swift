@@ -12,6 +12,7 @@ struct LedgerApp: App {
     @StateObject private var store = LedgerStore.shared
     
     init() {
+        _ = SupabaseManager.shared.client
         // Sync initial state to widget on launch
         LedgerStore.shared.syncToWidget()
     }
@@ -23,4 +24,3 @@ struct LedgerApp: App {
         }
     }
 }
-

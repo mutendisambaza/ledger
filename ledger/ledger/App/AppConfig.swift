@@ -46,4 +46,26 @@ enum AppConfig {
             assert(hasScheme, "OAuth URL scheme drift detected between GIDClientID and CFBundleURLTypes", file: file, line: line)
         }
     }
+
+    enum Supabase {
+        static func urlString() -> String? {
+            Bundle.main.object(forInfoDictionaryKey: "SUPABASE_URL") as? String
+        }
+
+        static func publishableKey() -> String? {
+            Bundle.main.object(forInfoDictionaryKey: "SUPABASE_PUBLISHABLE_KEY") as? String
+        }
+
+        static func assertConfigurationIsValid(file: StaticString = #fileID, line: UInt = #line) {
+            guard let rawURL = urlString(), let parsedURL = URL(string: rawURL), parsedURL.scheme != nil else {
+                assertionFailure("Missing or invalid SUPABASE_URL in Info.plist", file: file, line: line)
+                return
+            }
+
+            guard let key = publishableKey(), !key.isEmpty else {
+                assertionFailure("Missing SUPABASE_PUBLISHABLE_KEY in Info.plist", file: file, line: line)
+                return
+            }
+        }
+    }
 }

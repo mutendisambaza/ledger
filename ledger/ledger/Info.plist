@@ -15,5 +15,9 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>879598092731-sn5unu43moo46vveb1gkeb002fdvaknt.apps.googleusercontent.com</string>
+	<key>SUPABASE_PUBLISHABLE_KEY</key>
+	<string>SUPABASE_PUBLISHABLE_KEY_PLACEHOLDER</string>
+	<key>SUPABASE_URL</key>
+	<string>https://thfzbkhgrfduvvuytwpx.supabase.co</string>
 </dict>
 </plist>
