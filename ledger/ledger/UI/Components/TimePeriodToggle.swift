@@ -2,40 +2,38 @@
 //  TimePeriodToggle.swift
 //  ledger
 //
-//  Glassmorphic segmented control for time period selection
+//  Segmented period selector — selected indicator uses the current accent color.
 //
 
 import SwiftUI
 
 struct TimePeriodToggle: View {
     @ObservedObject var periodManager: TimePeriodManager
+    @EnvironmentObject var prefs: UserPreferences
 
     var body: some View {
-        HStack(spacing: DesignSystem.Spacing.xxs) {
+        HStack(spacing: DesignSystem.Spacing.xxxs) {
             ForEach(TimePeriod.allCases) { period in
                 PeriodButton(
                     period: period,
                     isSelected: periodManager.selectedPeriod == period,
+                    accent: prefs.accent,
                     action: {
-                        withAnimation(Animation.glassMorphSpring) {
+                        withAnimation(.stateToggle) {
                             periodManager.selectedPeriod = period
                         }
                     }
                 )
             }
         }
-        .padding(DesignSystem.Spacing.xxxs)
+        .padding(3)
         .background(
-            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                .fill(DesignSystem.Colors.glow(0.05))
-                .background(
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .stroke(DesignSystem.Colors.chrome(0.3), lineWidth: 1)
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                    .fill(DesignSystem.Colors.surface)
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                    .strokeBorder(DesignSystem.Colors.borderDefault, lineWidth: DesignSystem.Effects.borderWidth)
+            }
         )
     }
 }
@@ -43,6 +41,7 @@ struct TimePeriodToggle: View {
 private struct PeriodButton: View {
     let period: TimePeriod
     let isSelected: Bool
+    let accent: Color
     let action: () -> Void
 
     @State private var isPressed = false
@@ -50,80 +49,56 @@ private struct PeriodButton: View {
     var body: some View {
         Button(action: action) {
             Text(period.rawValue)
-                .font(DesignSystem.Typography.caption)
-                .fontWeight(isSelected ? .bold : .regular)
+                .font(DesignSystem.Typography.captionMedium)
+                .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundColor(
-                    isSelected ? DesignSystem.Colors.black : DesignSystem.Colors.glow(0.7)
+                    isSelected
+                        ? DesignSystem.Colors.black
+                        : DesignSystem.Colors.secondaryText
                 )
                 .padding(.horizontal, DesignSystem.Spacing.xs)
-                .padding(.vertical, DesignSystem.Spacing.xxs)
+                .padding(.vertical, 7)
                 .background(
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
-                        .fill(
-                            isSelected
-                                ? DesignSystem.Colors.sageGreen
-                                : Color.clear
-                        )
-                        .if(isSelected) { view in
-                            view.glow(
-                                color: DesignSystem.Colors.sageGreen,
-                                radius: DesignSystem.Effects.glowRadius,
-                                intensity: 0.6
-                            )
+                    Group {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
+                                .fill(accent)
+                        } else {
+                            Color.clear
                         }
+                    }
                 )
-                .scaleEffect(isPressed ? 0.95 : 1.0)
+                .scaleEffect(isPressed ? 0.96 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
+        .animation(.stateToggle, value: isSelected)
+        .animation(.spring(duration: 0.14, bounce: 0.0), value: isPressed)
+        .accessibilityLabel("\(period.rawValue) period")
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    if !isPressed {
-                        withAnimation(.easeIn(duration: 0.1)) {
-                            isPressed = true
-                        }
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.easeOut(duration: 0.1)) {
-                        isPressed = false
-                    }
-                }
+                .onChanged { _ in if !isPressed { isPressed = true } }
+                .onEnded { _ in isPressed = false }
         )
     }
 }
 
-// Helper extension for conditional modifiers
 extension View {
     @ViewBuilder
     func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
-        if condition {
-            transform(self)
-        } else {
-            self
-        }
+        if condition { transform(self) } else { self }
     }
 }
 
 #Preview {
-    VStack(spacing: 40) {
+    VStack(spacing: DesignSystem.Spacing.xl) {
         TimePeriodToggle(periodManager: TimePeriodManager())
-            .padding()
-
-        // Preview with different states
-        VStack {
-            Text("Preview States")
-                .font(DesignSystem.Typography.cardHeader)
-                .foregroundColor(.white)
-
-            TimePeriodToggle(periodManager: {
-                let manager = TimePeriodManager()
-                manager.selectedPeriod = .week
-                return manager
-            }())
-        }
-        .padding()
+        TimePeriodToggle(periodManager: {
+            let m = TimePeriodManager(); m.selectedPeriod = .week; return m
+        }())
     }
+    .padding(DesignSystem.Spacing.md)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(DesignSystem.Colors.black)
+    .environmentObject(UserPreferences())
 }

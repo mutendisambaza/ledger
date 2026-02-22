@@ -2,7 +2,8 @@
 //  GlassBackground.swift
 //  ledger
 //
-//  Created for Ledger Phase 3
+//  Machined aluminum card modifier — solid surface, whisper-thin border.
+//  Less frosted window, more refined material.
 //
 
 import SwiftUI
@@ -12,29 +13,25 @@ struct GlassBackground: ViewModifier {
         content
             .background(
                 ZStack {
-                    Color(hex: "171717").opacity(0.7)
-                    
-                    // Blur layer
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(.ultraThinMaterial)
-                        .opacity(0.3)
-                    
-                    // Gradient border
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(
+                    // Solid surface — the refined base
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
+                        .fill(DesignSystem.Colors.surface)
+
+                    // Whisper-thin border — top catches light, bottom recedes
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
+                        .strokeBorder(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(0.2),
-                                    Color.white.opacity(0.05)
+                                    Color.white.opacity(0.09),
+                                    Color.white.opacity(0.03)
                                 ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                                startPoint: .top,
+                                endPoint: .bottom
                             ),
-                            lineWidth: 1
+                            lineWidth: DesignSystem.Effects.borderWidth
                         )
                 }
             )
-            .cornerRadius(16)
     }
 }
 
@@ -43,4 +40,3 @@ extension View {
         modifier(GlassBackground())
     }
 }
-

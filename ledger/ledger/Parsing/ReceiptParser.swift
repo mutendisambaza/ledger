@@ -15,8 +15,19 @@ struct ParsedReceipt {
 }
 
 final class ReceiptParser {
+    private let merchantDomains: [String: String] = [
+        "uber.com": "Uber",
+        "amazon.com": "Amazon",
+        "apple.com": "Apple",
+        "doordash.com": "DoorDash",
+        "starbucks.com": "Starbucks",
+        "netflix.com": "Netflix",
+        "spotify.com": "Spotify"
+    ]
+
     func parse(message: GmailMessage) -> ParsedReceipt? {
-        let bodyText = message.bodyText
+        let bodyText = decodeHTMLEntities(in: message.bodyText)
+            .replacingOccurrences(of: "C$", with: "CAD ")
         let candidates = AmountPatterns.extractAmounts(from: bodyText)
         
         guard !candidates.isEmpty else {
@@ -54,11 +65,12 @@ final class ReceiptParser {
         let confidence = max(0.3, min(1.0, normalizedScore))
         
         // Extract merchant name
-        let merchant = extractMerchant(from: message)
+        let merchant = extractMerchant(fromHeaders: message.payload.headers) ?? extractMerchant(from: message)
+        let normalizedCurrency = normalizeCurrency(best.candidate.currency, context: best.candidate.context)
         
         return ParsedReceipt(
             amountCents: best.candidate.amountCents,
-            currency: best.candidate.currency,
+            currency: normalizedCurrency,
             merchant: merchant,
             confidence: confidence
         )
@@ -90,7 +102,7 @@ final class ReceiptParser {
         }
         
         // HIGH PRIORITY: Explicit charge/payment keywords
-        if lowerContext.contains("charged") || lowerContext.contains("paid") || lowerContext.contains("amount due") {
+        if lowerContext.contains("charged") || lowerContext.contains("charged to") || lowerContext.contains("paid") || lowerContext.contains("amount due") {
             score += 6
         }
         
@@ -106,7 +118,7 @@ final class ReceiptParser {
         
         // LOW PRIORITY: Subtotal (may not be the final amount)
         if lowerContext.contains("subtotal") {
-            score += 1
+            score += 3
         }
         
         // NEGATIVE SIGNALS: These suggest the amount is NOT the total
@@ -137,6 +149,23 @@ final class ReceiptParser {
         return score
     }
     
+    /// Extracts a merchant from email headers by matching known sender domains.
+    /// - Parameter headers: Gmail message headers.
+    /// - Returns: Canonical merchant name when recognized.
+    func extractMerchant(fromHeaders headers: [GmailHeader]) -> String? {
+        let fromValue = headers.first(where: { $0.name.caseInsensitiveCompare("From") == .orderedSame })?.value ?? ""
+        guard let senderDomain = domain(from: fromValue) else { return nil }
+
+        if let exact = merchantDomains[senderDomain] {
+            return exact
+        }
+
+        for (domain, canonical) in merchantDomains where senderDomain.hasSuffix(domain) {
+            return canonical
+        }
+        return nil
+    }
+
     private func extractMerchant(from message: GmailMessage) -> String {
         // Try to extract from "From" header
         let from = message.from
@@ -172,5 +201,35 @@ final class ReceiptParser {
         
         return "Unknown"
     }
-}
 
+    private func normalizeCurrency(_ currency: String, context: String) -> String {
+        let lowerContext = context.lowercased()
+        if lowerContext.contains("ca$") || lowerContext.contains("c$") || lowerContext.contains("cad") {
+            return "CAD"
+        }
+        if lowerContext.contains("usd") || lowerContext.contains("us$") {
+            return "USD"
+        }
+        if currency == "USD" || currency == "CAD" {
+            return currency
+        }
+        return "USD"
+    }
+
+    private func decodeHTMLEntities(in text: String) -> String {
+        text
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&#36;", with: "$")
+    }
+
+    private func domain(from fromHeader: String) -> String? {
+        guard let atIndex = fromHeader.lastIndex(of: "@") else { return nil }
+        let afterAt = fromHeader[fromHeader.index(after: atIndex)...]
+        let domainChars = afterAt.prefix { character in
+            character.isLetter || character.isNumber || character == "." || character == "-"
+        }
+        guard !domainChars.isEmpty else { return nil }
+        return String(domainChars).lowercased()
+    }
+}

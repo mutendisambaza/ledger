@@ -2,7 +2,8 @@
 //  DesignSystem.swift
 //  ledger
 //
-//  Modern Design System - Sage Green, Chrome Silver, Glowing White
+//  Single source of truth — Wealthsimple-grade design tokens
+//  Never hardcode values in views. Every color, size, and duration lives here.
 //
 
 import SwiftUI
@@ -12,22 +13,59 @@ enum DesignSystem {
     // MARK: - Colors
 
     enum Colors {
-        // Primary Palette
-        static let sageGreen = Color(hex: "B4C7B8")
-        static let chromeSilver = Color(hex: "C0C0C0")
-        static let glowingWhite = Color.white
-
-        // Backgrounds
+        // ── Backgrounds ────────────────────────────────────────────
+        /// True black base. Never grey-washed.
         static let black = Color(hex: "0B0B0C")
-        static let greyWhite = Color(hex: "F5F5F5")
+        /// Card / surface. Slightly warmer than pure black.
+        static let surface = Color(hex: "141416")
+        /// Elevated surface — modals, sheets, popovers.
+        static let surfaceElevated = Color(hex: "1C1C1F")
+        /// Light mode background. Cooler than #F5F5F5, no yellow cast.
+        static let backgroundLight = Color(hex: "F7F7F8")
+        /// Legacy alias kept for existing callsites.
+        static let greyWhite = Color(hex: "F7F7F8")
+
+        // ── Text hierarchy ─────────────────────────────────────────
+        /// Primary text — not pure white, softer on the eye.
+        static let primaryText = Color.white.opacity(0.92)
+        /// Secondary / metadata — subtext, timestamps, counts.
+        static let secondaryText = Color.white.opacity(0.38)
+        /// Primary text on light backgrounds.
+        static let primaryTextLight = Color.black.opacity(0.88)
+
+        // ── Borders ────────────────────────────────────────────────
+        /// Whisper-thin border — barely visible, just enough depth.
+        static let borderDefault = Color.white.opacity(0.07)
+        /// Light mode border.
+        static let borderLight = Color.black.opacity(0.08)
+
+        // ── Accent system (all pass WCAG AA on #0B0B0C) ────────────
+        /// Sage — deeper, more confident. Replaces #B4C7B8.
+        static let sageGreen = Color(hex: "8DB99B")
+        /// Blue — strong, already correct.
+        static let blue = Color(hex: "6FA8FF")
+        /// Coral — warm, energetic.
+        static let coral = Color(hex: "FF8F6B")
+        /// Lavender — slightly more saturated.
+        static let lavender = Color(hex: "C4A8F5")
+
+        // ── Legacy palette (keep for existing callsites) ───────────
+        static let chromeSilver = Color(hex: "8A8A8E")   // muted silver, less bright
+        static let glowingWhite = Color.white.opacity(0.92)
         static let darkGrey = Color(hex: "3A3A3A")
         static let mediumGrey = Color(hex: "6B6B6B")
 
-        // Accent Colors
+        // ── Semantic colors ────────────────────────────────────────
+        /// Wealthsimple green — trustworthy, not neon.
+        static let successGreen = Color(hex: "4CAF7D")
+        static let warningColor = Color(hex: "F5A623")
+        /// Danger / failure — unchanged.
         static let failedRed = Color(hex: "FF6B6B")
-        static let successGreen = sageGreen
+        static let dangerColor = failedRed
+        /// Pending / in-flight — same as secondaryText, not alarming.
+        static let pendingColor = Color.white.opacity(0.38)
 
-        // Transparency variations
+        // ── Opacity helpers ────────────────────────────────────────
         static func sage(_ opacity: Double) -> Color {
             sageGreen.opacity(opacity)
         }
@@ -36,38 +74,44 @@ enum DesignSystem {
             chromeSilver.opacity(opacity)
         }
 
+        /// White with opacity — use for glow containers, never for text.
         static func glow(_ opacity: Double) -> Color {
-            glowingWhite.opacity(opacity)
+            Color.white.opacity(opacity)
         }
     }
 
     // MARK: - Typography
+    // Typography does the heavy lifting — hierarchy through weight and size, not color noise.
 
     enum Typography {
         // Display
         static let splashLogo: Font = .system(size: 72, weight: .bold, design: .rounded)
         static let splashText: Font = .system(size: 56, weight: .light)
-        static let heroAmount: Font = .system(size: 64, weight: .bold, design: .rounded)
+        /// Hero amount — monospaced prevents layout shift during count animations.
+        static let heroAmount: Font = .system(size: 64, weight: .semibold, design: .monospaced)
         static let restingAmount: Font = .system(size: 72, weight: .light, design: .monospaced)
 
         // Headers
-        static let calendarHeader: Font = .system(size: 36, weight: .medium)
-        static let sectionHeader: Font = .system(size: 28, weight: .semibold)
-        static let cardHeader: Font = .system(size: 20, weight: .semibold)
+        static let calendarHeader: Font = .system(size: 34, weight: .semibold)
+        static let sectionHeader: Font = .system(size: 26, weight: .semibold)
+        static let cardHeader: Font = .system(size: 18, weight: .semibold)
 
         // Body
         static let body: Font = .system(size: 16, weight: .regular)
         static let bodyMedium: Font = .system(size: 16, weight: .medium)
         static let caption: Font = .system(size: 14, weight: .regular)
-        static let captionBold: Font = .system(size: 14, weight: .bold)
+        static let captionMedium: Font = .system(size: 14, weight: .medium)
+        static let captionBold: Font = .system(size: 14, weight: .semibold)
+        static let micro: Font = .system(size: 12, weight: .regular)
 
-        // Amounts
-        static let amountLarge: Font = .system(size: 48, weight: .bold, design: .monospaced)
-        static let amountMedium: Font = .system(size: 32, weight: .semibold, design: .monospaced)
-        static let amountSmall: Font = .system(size: 24, weight: .medium, design: .monospaced)
+        // Amounts — monospaced non-negotiable for alignment and count animations
+        static let amountLarge: Font = .system(size: 48, weight: .semibold, design: .monospaced)
+        static let amountMedium: Font = .system(size: 32, weight: .medium, design: .monospaced)
+        static let amountSmall: Font = .system(size: 22, weight: .regular, design: .monospaced)
     }
 
     // MARK: - Spacing
+    // Generous whitespace makes numbers feel important.
 
     enum Spacing {
         static let xxxs: CGFloat = 4
@@ -87,54 +131,57 @@ enum DesignSystem {
         static let xs: CGFloat = 8
         static let sm: CGFloat = 12
         static let md: CGFloat = 16
-        static let lg: CGFloat = 24
-        static let xl: CGFloat = 32
+        static let lg: CGFloat = 20
+        static let xl: CGFloat = 28
         static let full: CGFloat = 9999
     }
 
     // MARK: - Effects
+    // Restraint is the upgrade. Max one glow per scroll viewport.
 
     enum Effects {
-        // Glow Configurations
-        static let glowRadius: CGFloat = 12
-        static let glowRadiusLarge: CGFloat = 24
-        static let glowRadiusXL: CGFloat = 40
+        // Glow radii — ambient only, never spotlight
+        static let glowRadius: CGFloat = 10          // Component-level glow
+        static let glowRadiusLarge: CGFloat = 20     // Hero element glow (hero amount)
+        static let glowRadiusXL: CGFloat = 50        // Ambient background glow (use sparingly)
 
-        // Blur Radii
+        // Glow opacity ceilings — 0.12–0.18 range is ambient, not decorative
+        static let glowOpacityAmbient: Double = 0.15
+        static let glowOpacitySubtle: Double = 0.10
+
+        // Blur radii
         static let blurThin: CGFloat = 8
         static let blurMedium: CGFloat = 16
         static let blurThick: CGFloat = 24
 
-        // Shadow Configurations
-        static let shadowColor = Colors.glow(0.3)
-        static let shadowRadius: CGFloat = 16
-        static let shadowOffset: CGSize = CGSize(width: 0, height: 8)
+        // Shadow — for light mode elevation, not dark mode glow
+        static let shadowColor = Color.black.opacity(0.12)
+        static let shadowRadius: CGFloat = 12
+        static let shadowOffset: CGSize = CGSize(width: 0, height: 4)
 
-        // Chrome Gradient
+        // Border — whisper-thin, just enough depth
+        static let borderWidth: CGFloat = 0.5
+
+        // Chrome gradient — muted, not theatrical
         static let chromeGradient = LinearGradient(
             colors: [
-                Colors.chrome(0.1),
-                Colors.chrome(0.4),
-                Colors.chrome(0.8),
-                Colors.chrome(0.4),
-                Colors.chrome(0.1)
+                Colors.chrome(0.06),
+                Colors.chrome(0.18),
+                Colors.chrome(0.10),
+                Colors.chrome(0.06)
             ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
 
-        // Sage Gradient
+        // Sage gradient — for selected states
         static let sageGradient = LinearGradient(
-            colors: [
-                Colors.sage(0.3),
-                Colors.sage(0.6),
-                Colors.sage(1.0)
-            ],
+            colors: [Colors.sage(0.18), Colors.sage(0.10)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
 
-        // Glass Material
+        // Glass material — use sparingly; prefer solid surface colors
         static let glassMaterial = Material.ultraThinMaterial
     }
 
@@ -142,9 +189,10 @@ enum DesignSystem {
 
     enum Duration {
         static let instant: Double = 0.15
-        static let fast: Double = 0.25
-        static let normal: Double = 0.35
+        static let fast: Double = 0.18        // Exit transitions
+        static let normal: Double = 0.32      // Entry transitions
         static let slow: Double = 0.5
+        static let count: Double = 0.6        // Hero number counting
         static let splash: Double = 4.0
         static let splashTransition: Double = 0.5
     }

@@ -93,6 +93,7 @@ struct CalendarNode: View {
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(date == nil)
+        .accessibilityLabel(accessibilityLabelText)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in
@@ -132,6 +133,14 @@ struct CalendarNode: View {
         } else {
             return DesignSystem.Colors.glow(0.6)
         }
+    }
+
+    private var accessibilityLabelText: String {
+        guard let date else { return "No date" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        let total = String(format: "$%.2f", Double(totalCents) / 100.0)
+        return "\(formatter.string(from: date)), \(isFailed ? "over limit" : "within limit"), \(total) spent"
     }
 }
 

@@ -38,7 +38,9 @@ struct SwipeGestureModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .offset(y: isDragging ? min(max(dragOffset.height, -100), 100) * 0.1 : 0)
-            .gesture(
+            // simultaneousGesture lets the drag fire alongside ScrollView's built-in scroll,
+            // which is necessary for swipe-down to work when a ScrollView is a child.
+            .simultaneousGesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { value in
                         withAnimation(.gestureSpring) {
@@ -51,7 +53,6 @@ struct SwipeGestureModifier: ViewModifier {
                             isDragging = false
                             dragOffset = .zero
                         }
-
                         handleSwipe(translation: value.translation, predictedEndTranslation: value.predictedEndTranslation)
                     }
             )

@@ -19,15 +19,18 @@ final class GoogleAuthManager: ObservableObject {
     private let scope: String
 
     init() {
-        // OAuth configuration from AppConfig
-        // Note: Client IDs for mobile apps are public by design (embedded in app binary)
-        self.clientId = AppConfig.GoogleOAuth.clientId
+        AppConfig.GoogleOAuth.assertConfigurationIsValid()
+        self.clientId = AppConfig.GoogleOAuth.clientID() ?? ""
         self.scope = AppConfig.GoogleOAuth.authScope
 
         checkAuthState()
     }
     
     func signIn() async throws {
+        guard !clientId.isEmpty else {
+            throw AuthError.notAuthenticated
+        }
+
         // Get the root view controller for presenting Google Sign-In
         guard let rootViewController = getRootViewController() else {
             throw AuthError.noViewController
@@ -162,4 +165,3 @@ enum AuthError: Error {
     case tokenRefreshFailed
     case noViewController
 }
-

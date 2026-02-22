@@ -2,7 +2,8 @@
 //  ChromeEffect.swift
 //  ledger
 //
-//  Chrome reflective shimmer effect
+//  Muted shimmer — barely perceptible, not theatrical.
+//  Opacity ceiling: 0.14 max, blend mode overlay for realism.
 //
 
 import SwiftUI
@@ -17,18 +18,16 @@ struct ChromeEffectModifier: ViewModifier {
             .background(
                 GeometryReader { geometry in
                     Color.clear
-                        .onAppear {
-                            viewWidth = geometry.size.width
-                        }
+                        .onAppear { viewWidth = geometry.size.width }
                 }
             )
             .overlay(
                 LinearGradient(
                     colors: [
                         Color.white.opacity(0),
-                        Color.white.opacity(0.2),
-                        Color.white.opacity(0.4),
-                        Color.white.opacity(0.2),
+                        Color.white.opacity(0.07),
+                        Color.white.opacity(0.14),
+                        Color.white.opacity(0.07),
                         Color.white.opacity(0)
                     ],
                     startPoint: .topLeading,
@@ -37,7 +36,7 @@ struct ChromeEffectModifier: ViewModifier {
                 .offset(x: shimmerOffset * (viewWidth > 0 ? viewWidth : 400))
                 .mask(content)
                 .blendMode(.overlay)
-                .opacity(isAnimated ? 1 : 0.5)
+                .opacity(isAnimated ? 1 : 0.3)
                 .onAppear {
                     guard isAnimated else { return }
                     withAnimation(
@@ -52,8 +51,6 @@ struct ChromeEffectModifier: ViewModifier {
 }
 
 extension View {
-    /// Adds a chrome shimmer effect to the view
-    /// - Parameter animated: Whether the shimmer should animate
     func chromeEffect(animated: Bool = true) -> some View {
         modifier(ChromeEffectModifier(isAnimated: animated))
     }

@@ -2,25 +2,25 @@
 //  LedgerApp.swift
 //  ledger
 //
-//  Created for Ledger Phase 1
-//
 
 import SwiftUI
 
 @main
 struct LedgerApp: App {
     @StateObject private var store = LedgerStore.shared
-    
+    @StateObject private var prefs = UserPreferences()
+
     init() {
-        // Sync initial state to widget on launch
+        _ = SupabaseManager.shared.client
         LedgerStore.shared.syncToWidget()
     }
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
+                .environmentObject(prefs)
+                .preferredColorScheme(prefs.colorScheme)
         }
     }
 }
-

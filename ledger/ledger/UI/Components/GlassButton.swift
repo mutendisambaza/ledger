@@ -2,7 +2,8 @@
 //  GlassButton.swift
 //  ledger
 //
-//  Glassmorphic button with pressed state and glow effect
+//  Surface button with physical press feedback and inline loading state.
+//  Loading state: spinner + label, no press animation, no bounce.
 //
 
 import SwiftUI
@@ -14,8 +15,13 @@ struct GlassButton: View {
 
     var style: ButtonStyle = .primary
     var isCompact: Bool = false
+    /// When true, shows a spinner instead of the icon and disables interaction.
+    var isLoading: Bool = false
+    /// Text shown while isLoading is true.
+    var loadingTitle: String?
 
     @State private var isPressed = false
+    @EnvironmentObject var prefs: UserPreferences
 
     enum ButtonStyle {
         case primary
@@ -24,97 +30,72 @@ struct GlassButton: View {
 
         var backgroundColor: Color {
             switch self {
-            case .primary:
-                return DesignSystem.Colors.sage(0.15)
-            case .secondary:
-                return DesignSystem.Colors.chrome(0.1)
-            case .minimal:
-                return Color.clear
-            }
-        }
-
-        var borderColor: Color {
-            switch self {
-            case .primary:
-                return DesignSystem.Colors.sageGreen
-            case .secondary:
-                return DesignSystem.Colors.chromeSilver
-            case .minimal:
-                return DesignSystem.Colors.glow(0.2)
-            }
-        }
-
-        var glowColor: Color {
-            switch self {
-            case .primary:
-                return DesignSystem.Colors.sageGreen
-            case .secondary, .minimal:
-                return DesignSystem.Colors.glowingWhite
+            case .primary:             return DesignSystem.Colors.surface
+            case .secondary, .minimal: return DesignSystem.Colors.surface
             }
         }
     }
 
     var body: some View {
         Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                isPressed = true
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                    isPressed = false
-                }
+            guard !isLoading else { return }
+            withAnimation(.stateToggle) { isPressed = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) {
+                withAnimation(.stateToggle) { isPressed = false }
                 action()
             }
         }) {
             HStack(spacing: DesignSystem.Spacing.xs) {
-                if let icon = icon {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: prefs.accent))
+                        .scaleEffect(isCompact ? 0.7 : 0.85)
+                } else if let icon = icon {
                     Image(systemName: icon)
-                        .font(isCompact ? .body : .title3)
+                        .font(isCompact ? .footnote : .body)
+                        .fontWeight(.medium)
                 }
 
-                Text(title)
-                    .font(isCompact ? DesignSystem.Typography.caption : DesignSystem.Typography.bodyMedium)
-                    .fontWeight(.semibold)
+                Text(isLoading ? (loadingTitle ?? title) : title)
+                    .font(isCompact ? DesignSystem.Typography.captionMedium : DesignSystem.Typography.bodyMedium)
+                    .fontWeight(.medium)
             }
-            .foregroundColor(DesignSystem.Colors.glowingWhite)
+            .foregroundColor(style == .primary ? prefs.accent : DesignSystem.Colors.secondaryText)
             .padding(.horizontal, isCompact ? DesignSystem.Spacing.sm : DesignSystem.Spacing.md)
-            .padding(.vertical, isCompact ? DesignSystem.Spacing.xs : DesignSystem.Spacing.sm)
-            .background(
-                ZStack {
-                    // Glass background
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .fill(style.backgroundColor)
-                        .background(.ultraThinMaterial)
-
-                    // Border
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    style.borderColor.opacity(0.6),
-                                    style.borderColor.opacity(0.3)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5
-                        )
-                }
+            .padding(.vertical, isCompact ? DesignSystem.Spacing.xxs : DesignSystem.Spacing.sm)
+            .background(buttonBackground)
+            .scaleEffect((!isLoading && isPressed) ? 0.97 : 1.0)
+            .shadow(
+                color: prefs.accent.opacity((!isLoading && isPressed) ? 0.20 : 0),
+                radius: 12
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                    .fill(Color.white.opacity(isPressed ? 0.2 : 0))
-            )
-            .glow(color: style.glowColor, radius: isPressed ? 20 : 8, intensity: isPressed ? 0.8 : 0.4)
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-            .chromeEffect(animated: false)
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(isLoading)
+        .animation(.stateToggle, value: isPressed)
+        .animation(.stateToggle, value: isLoading)
+    }
+
+    private var buttonBackground: some View {
+        let borderColor: Color = style == .primary
+            ? prefs.accent.opacity(0.28)
+            : DesignSystem.Colors.borderDefault
+
+        return ZStack {
+            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                .fill(style.backgroundColor)
+            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [borderColor, borderColor.opacity(0.5)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: DesignSystem.Effects.borderWidth
+                )
+        }
     }
 }
-
-// MARK: - Convenience Initializers
 
 extension GlassButton {
     init(
@@ -122,25 +103,30 @@ extension GlassButton {
         icon: String? = nil,
         style: ButtonStyle = .primary,
         isCompact: Bool = false,
+        isLoading: Bool = false,
+        loadingTitle: String? = nil,
         action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
         self.style = style
         self.isCompact = isCompact
+        self.isLoading = isLoading
+        self.loadingTitle = loadingTitle
         self.action = action
     }
 }
 
-// MARK: - Preview
-
 #Preview {
-    VStack(spacing: 24) {
-        GlassButton("Primary Button", icon: "star.fill", style: .primary) {}
-        GlassButton("Secondary Button", icon: "gear", style: .secondary) {}
-        GlassButton("Minimal Button", style: .minimal) {}
-        GlassButton("Compact", icon: "plus", isCompact: true) {}
+    VStack(spacing: DesignSystem.Spacing.md) {
+        GlassButton("Rebalance Ledger", icon: "arrow.clockwise") {}
+            .environmentObject(UserPreferences())
+        GlassButton("Rebalance Ledger", icon: "arrow.clockwise",
+                    isLoading: true, loadingTitle: "Rebalancing…") {}
+            .environmentObject(UserPreferences())
+        GlassButton("Secondary", style: .secondary) {}
+            .environmentObject(UserPreferences())
     }
-    .padding()
+    .padding(DesignSystem.Spacing.md)
     .background(DesignSystem.Colors.black)
 }

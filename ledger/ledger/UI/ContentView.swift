@@ -53,7 +53,11 @@ struct ContentView: View {
         .environmentObject(router)
         .onChange(of: authManager.isAuthenticated) { oldValue, newValue in
             // Handle authentication state changes
-            if !newValue && router.currentScreen != .splash {
+            if newValue {
+                if router.currentScreen == .signIn || router.currentScreen == .splash {
+                    router.navigate(to: .resting)
+                }
+            } else if router.currentScreen != .splash {
                 router.navigate(to: .signIn)
             }
         }
