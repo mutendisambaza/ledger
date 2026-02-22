@@ -2,76 +2,96 @@
 //  GlassCard.swift
 //  ledger
 //
-//  Enhanced glassmorphic card with chrome border and glow
+//  Premium surface card — machined aluminium, not frosted glass.
+//  Design principle: the border defines the card, not the blur.
+//  Cards breathe — padding is never tight, borders are whisper-thin.
 //
 
 import SwiftUI
 
+// MARK: - GlassCard
+
 struct GlassCard<Content: View>: View {
     let content: Content
-    var padding: CGFloat = DesignSystem.Spacing.md
-    var glowIntensity: Double = 0.3
-    var showChrome: Bool = true
+    var padding: CGFloat
+    var variant: Variant
+    var showBorder: Bool
+
+    enum Variant {
+        case `default`
+        case selected   // Accent-tinted, for active/chosen state
+        case danger     // Danger-tinted, for errors / over-budget
+
+        var background: Color {
+            switch self {
+            case .default: return DesignSystem.Colors.surface
+            case .selected: return DesignSystem.Colors.sage(0.08)
+            case .danger: return DesignSystem.Colors.dangerColor.opacity(0.07)
+            }
+        }
+
+        var borderTopColor: Color {
+            switch self {
+            case .default: return Color.white.opacity(0.09)
+            case .selected: return DesignSystem.Colors.sageGreen.opacity(0.22)
+            case .danger: return DesignSystem.Colors.dangerColor.opacity(0.22)
+            }
+        }
+
+        var borderBottomColor: Color {
+            switch self {
+            case .default: return Color.white.opacity(0.03)
+            case .selected: return DesignSystem.Colors.sageGreen.opacity(0.08)
+            case .danger: return DesignSystem.Colors.dangerColor.opacity(0.08)
+            }
+        }
+    }
 
     init(
         padding: CGFloat = DesignSystem.Spacing.md,
-        glowIntensity: Double = 0.3,
-        showChrome: Bool = true,
+        variant: Variant = .default,
+        showBorder: Bool = true,
         @ViewBuilder content: () -> Content
     ) {
         self.padding = padding
-        self.glowIntensity = glowIntensity
-        self.showChrome = showChrome
+        self.variant = variant
+        self.showBorder = showBorder
         self.content = content()
     }
 
     var body: some View {
         content
             .padding(padding)
-            .background(
-                ZStack {
-                    // Dark glass background
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    DesignSystem.Colors.darkGrey.opacity(0.4),
-                                    DesignSystem.Colors.darkGrey.opacity(0.2)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .background(.ultraThinMaterial)
+            .background(cardBackground)
+    }
 
-                    // Chrome border gradient
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    DesignSystem.Colors.chrome(0.6),
-                                    DesignSystem.Colors.chrome(0.3),
-                                    DesignSystem.Colors.chrome(0.1),
-                                    DesignSystem.Colors.chrome(0.3),
-                                    DesignSystem.Colors.chrome(0.6)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                        .opacity(showChrome ? 1 : 0)
-                }
-            )
-            .glow(
-                color: DesignSystem.Colors.glowingWhite,
-                radius: DesignSystem.Effects.glowRadius,
-                intensity: glowIntensity
-            )
+    private var cardBackground: some View {
+        ZStack {
+            // Solid surface — the "machined" base, no blurry frosting
+            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
+                .fill(variant.background)
+
+            // Whisper-thin border — catches light on top, recedes on bottom
+            if showBorder {
+                RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                variant.borderTopColor,
+                                variant.borderBottomColor
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: DesignSystem.Effects.borderWidth
+                    )
+            }
+        }
     }
 }
 
-// MARK: - Sage Variant
+// MARK: - SageGlassCard
+// Accent-tinted variant for insight/success states.
 
 struct SageGlassCard<Content: View>: View {
     let content: Content
@@ -86,62 +106,49 @@ struct SageGlassCard<Content: View>: View {
     }
 
     var body: some View {
-        content
-            .padding(padding)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    DesignSystem.Colors.sage(0.2),
-                                    DesignSystem.Colors.sage(0.1)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .background(.ultraThinMaterial)
-
-                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
-                        .strokeBorder(
-                            DesignSystem.Colors.sageGreen.opacity(0.5),
-                            lineWidth: 1.5
-                        )
-                }
-            )
-            .glow(color: DesignSystem.Colors.sageGreen, radius: 16, intensity: 0.4)
+        GlassCard(padding: padding, variant: .selected) {
+            content
+        }
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    VStack(spacing: 32) {
+    VStack(spacing: DesignSystem.Spacing.md) {
         GlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Chrome Glass Card")
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                Text("Default Card")
                     .font(DesignSystem.Typography.cardHeader)
-                    .foregroundColor(.white)
-
-                Text("With subtle glow and chrome border")
+                    .foregroundColor(DesignSystem.Colors.primaryText)
+                Text("Whisper-thin border, solid surface")
                     .font(DesignSystem.Typography.caption)
-                    .foregroundColor(DesignSystem.Colors.glow(0.7))
+                    .foregroundColor(DesignSystem.Colors.secondaryText)
             }
         }
 
-        SageGlassCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Sage Glass Card")
+        GlassCard(variant: .selected) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                Text("Selected Card")
                     .font(DesignSystem.Typography.cardHeader)
-                    .foregroundColor(.white)
-
-                Text("With sage green accent glow")
+                    .foregroundColor(DesignSystem.Colors.primaryText)
+                Text("Accent-tinted for active states")
                     .font(DesignSystem.Typography.caption)
-                    .foregroundColor(DesignSystem.Colors.sage(0.9))
+                    .foregroundColor(DesignSystem.Colors.sageGreen)
+            }
+        }
+
+        GlassCard(variant: .danger) {
+            VStack(alignment: .leading, spacing: DesignSystem.Spacing.xxs) {
+                Text("Danger Card")
+                    .font(DesignSystem.Typography.cardHeader)
+                    .foregroundColor(DesignSystem.Colors.primaryText)
+                Text("For over-budget or error states")
+                    .font(DesignSystem.Typography.caption)
+                    .foregroundColor(DesignSystem.Colors.dangerColor)
             }
         }
     }
-    .padding()
+    .padding(DesignSystem.Spacing.md)
     .background(DesignSystem.Colors.black)
 }

@@ -9,12 +9,12 @@ import SwiftUI
 
 struct AmountText: View {
     let cents: Int
-    var style: Font = .body
-    
+    var style: Font = DesignSystem.Typography.body
+
     var body: some View {
         Text(formatAmount(cents))
             .font(style.monospacedDigit())
-            .foregroundColor(.white)
+            .foregroundColor(DesignSystem.Colors.primaryText)
     }
     
     private func formatAmount(_ cents: Int) -> String {

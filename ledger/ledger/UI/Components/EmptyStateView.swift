@@ -2,37 +2,35 @@
 //  EmptyStateView.swift
 //  ledger
 //
-//  Created for Ledger Phase 3
+//  Calm empty state — no drama, no gamification.
 //
 
 import SwiftUI
 
 struct EmptyStateView: View {
     @State private var appeared = false
-    
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: DesignSystem.Spacing.xs) {
             Image(systemName: "eye")
-                .font(.system(size: 32, weight: .light))
-                .foregroundColor(Color(hex: "A1A1AA").opacity(0.5))
-                .padding(.bottom, 8)
-            
-            Text("No spending detected today")
-                .font(.body)
-                .foregroundColor(Color(hex: "A1A1AA"))
-            
+                .font(.system(size: 28, weight: .ultraLight))
+                .foregroundColor(DesignSystem.Colors.secondaryText)
+
+            Text("No spending detected")
+                .font(DesignSystem.Typography.bodyMedium)
+                .foregroundColor(DesignSystem.Colors.secondaryText)
+
             Text("Ledger is watching")
-                .font(.caption)
-                .foregroundColor(Color(hex: "A1A1AA").opacity(0.7))
+                .font(DesignSystem.Typography.caption)
+                .foregroundColor(DesignSystem.Colors.secondaryText.opacity(0.6))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 48)
+        .padding(.vertical, DesignSystem.Spacing.xl)
         .opacity(appeared ? 1 : 0)
         .onAppear {
-            withAnimation(.easeOut(duration: 0.5).delay(0.3)) {
+            withAnimation(.easeOut(duration: 0.4).delay(0.25)) {
                 appeared = true
             }
         }
     }
 }
-

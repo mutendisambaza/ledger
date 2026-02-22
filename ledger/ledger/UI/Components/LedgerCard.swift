@@ -16,9 +16,9 @@ struct LedgerCard<Content: View>: View {
     
     var body: some View {
         content
-            .padding(16)
-            .background(Color(hex: "171717"))
-            .cornerRadius(16)
+            .padding(DesignSystem.Spacing.md)
+            .background(DesignSystem.Colors.surface)
+            .cornerRadius(DesignSystem.CornerRadius.lg)
     }
 }
 

@@ -50,38 +50,34 @@ struct CalendarView: View {
         HStack {
             // Previous month button
             Button(action: {
-                withAnimation(Animation.glassMorphSpring) {
+                withAnimation(.stateToggle) {
                     calendarManager.previousMonth()
                 }
             }) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.chromeSilver)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.secondaryText)
                     .frame(width: 44, height: 44)
             }
 
             Spacer()
 
-            // Month and year
+            // Month and year — typography does the hierarchy work, no glow on text
             Text(calendarManager.formattedMonthYear())
                 .font(DesignSystem.Typography.calendarHeader)
-                .foregroundColor(DesignSystem.Colors.glowingWhite)
-                .glow(
-                    color: DesignSystem.Colors.glowingWhite,
-                    radius: DesignSystem.Effects.glowRadius
-                )
+                .foregroundColor(DesignSystem.Colors.primaryText)
 
             Spacer()
 
             // Next month button
             Button(action: {
-                withAnimation(Animation.glassMorphSpring) {
+                withAnimation(.stateToggle) {
                     calendarManager.nextMonth()
                 }
             }) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(DesignSystem.Colors.chromeSilver)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(DesignSystem.Colors.secondaryText)
                     .frame(width: 44, height: 44)
             }
         }
@@ -91,8 +87,8 @@ struct CalendarView: View {
         HStack(spacing: 8) {
             ForEach(CalendarDataManager.weekdayAbbreviations(), id: \.self) { weekday in
                 Text(weekday)
-                    .font(DesignSystem.Typography.bodyMedium)
-                    .foregroundColor(DesignSystem.Colors.chromeSilver)
+                    .font(DesignSystem.Typography.captionMedium)
+                    .foregroundColor(DesignSystem.Colors.secondaryText)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -124,7 +120,7 @@ struct CalendarView: View {
                                     transactions: ledgerStore.transactions
                                 ),
                                 onTap: {
-                                    withAnimation(Animation.glassMorphSpring) {
+                                    withAnimation(.stateToggle) {
                                         selectedDay = date
                                     }
                                 }
@@ -155,27 +151,27 @@ struct CalendarView: View {
                 HStack {
                     Text(formatDate(date))
                         .font(DesignSystem.Typography.cardHeader)
-                        .foregroundColor(DesignSystem.Colors.glowingWhite)
+                        .foregroundColor(DesignSystem.Colors.primaryText)
 
                     Spacer()
 
                     // Close button
                     Button(action: {
-                        withAnimation(Animation.glassMorphSpring) {
+                        withAnimation(.stateToggle) {
                             selectedDay = nil
                         }
                     }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(DesignSystem.Colors.chromeSilver)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(DesignSystem.Colors.secondaryText)
                     }
                 }
 
                 // Total amount
                 HStack {
-                    Text("Total:")
-                        .font(DesignSystem.Typography.body)
-                        .foregroundColor(DesignSystem.Colors.glow(0.7))
+                    Text("Total")
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.secondaryText)
 
                     Spacer()
 
@@ -202,11 +198,11 @@ struct CalendarView: View {
                 // Transaction count
                 if dayTransactions.count > 0 {
                     Divider()
-                        .background(DesignSystem.Colors.chrome(0.3))
+                        .background(DesignSystem.Colors.borderDefault)
 
                     Text("\(dayTransactions.count) transaction\(dayTransactions.count == 1 ? "" : "s")")
                         .font(DesignSystem.Typography.caption)
-                        .foregroundColor(DesignSystem.Colors.glow(0.6))
+                        .foregroundColor(DesignSystem.Colors.secondaryText)
                 }
             }
             .padding(DesignSystem.Spacing.md)

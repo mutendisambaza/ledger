@@ -2,7 +2,8 @@
 //  InsightCard.swift
 //  ledger
 //
-//  Created for Ledger Phase 3
+//  Calm, informational — "Ledger noticed…" tone, never urgent.
+//  Entry: slides from bottom 10pt (content pattern, not notification).
 //
 
 import SwiftUI
@@ -10,52 +11,55 @@ import SwiftUI
 struct InsightCard: View {
     let insight: Insight
     var onDismiss: (() -> Void)? = nil
+
     @State private var appeared = false
-    
+
     var body: some View {
-        HStack(spacing: 12) {
-            // Subtle icon
+        HStack(spacing: DesignSystem.Spacing.sm) {
+            // Icon pill — blue accent, restrained
             Circle()
-                .fill(Color(hex: "3B82F6").opacity(0.2))
-                .frame(width: 32, height: 32)
+                .fill(DesignSystem.Colors.blue.opacity(0.12))
+                .frame(width: 30, height: 30)
                 .overlay(
                     Image(systemName: iconName)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(Color(hex: "3B82F6"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.blue)
                 )
-            
+
             Text(insight.message)
-                .font(.subheadline)
-                .foregroundColor(.white)
-            
-            Spacer()
-            
+                .font(DesignSystem.Typography.caption)
+                .foregroundColor(DesignSystem.Colors.secondaryText)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            Spacer(minLength: 0)
+
             if let onDismiss = onDismiss {
                 Button(action: onDismiss) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(hex: "A1A1AA"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(DesignSystem.Colors.secondaryText)
                 }
             }
         }
-        .padding(16)
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.vertical, DesignSystem.Spacing.xs)
         .glassCard()
         .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : -10)
+        .offset(y: appeared ? 0 : 10)
         .onAppear {
-            withAnimation(.ledgerSpring.delay(0.2)) {
+            withAnimation(.alertAppear.delay(0.15)) {
                 appeared = true
             }
         }
     }
-    
+
     private var iconName: String {
         switch insight.type {
-        case .accumulation: return "arrow.up.right"
-        case .velocity: return "clock"
-        case .unusual: return "exclamationmark.circle"
-        case .aboveAverage: return "chart.line.uptrend.xyaxis"
+        case .accumulation:  return "arrow.up.right"
+        case .velocity:      return "clock"
+        case .unusual:       return "exclamationmark.circle"
+        case .aboveAverage:  return "chart.line.uptrend.xyaxis"
         }
     }
 }
-
