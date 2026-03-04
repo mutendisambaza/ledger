@@ -46,7 +46,8 @@ struct TransactionRow: View {
     }
 
     private var formattedAmount: String {
-        String(format: "$%.2f", Double(transaction.amountCents) / 100.0)
+        let symbol = AppConfig.Defaults.currentCurrencySymbol()
+        return String(format: "\(symbol)%.2f", Double(transaction.amountCents) / 100.0)
     }
 
     private var relativeTime: String {

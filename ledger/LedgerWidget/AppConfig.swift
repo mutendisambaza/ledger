@@ -16,6 +16,7 @@ enum AppConfig {
         static let lastUpdated = "last_updated_iso"
         static let todayDate = "today_date_iso"
         static let transactions = "transactions_json"
+        static let dailySpendLimitCents = "dailySpendLimitCents"
     }
     
     enum Defaults {
@@ -23,4 +24,3 @@ enum AppConfig {
         static let currencySymbol = "$"
     }
 }
-

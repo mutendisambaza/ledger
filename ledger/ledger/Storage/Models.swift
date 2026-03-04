@@ -19,7 +19,8 @@ struct Transaction: Codable, Identifiable, Equatable {
     
     var amountFormatted: String {
         let dollars = Double(amountCents) / 100.0
-        return String(format: "$%.2f", dollars)
+        let symbol = AppConfig.Defaults.symbol(for: currency)
+        return String(format: "\(symbol)%.2f", dollars)
     }
 }
 
@@ -31,7 +32,7 @@ struct DailySummary: Codable {
     
     var totalFormatted: String {
         let dollars = Double(totalCents) / 100.0
-        return String(format: "$%.2f", dollars)
+        let symbol = AppConfig.Defaults.currentCurrencySymbol()
+        return String(format: "\(symbol)%.2f", dollars)
     }
 }
-

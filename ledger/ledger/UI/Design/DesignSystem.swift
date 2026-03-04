@@ -13,47 +13,29 @@ enum DesignSystem {
     // MARK: - Colors
 
     enum Colors {
-        // ── Backgrounds ────────────────────────────────────────────
-        /// True black base. Never grey-washed.
-        static let black = Color(hex: "0B0B0C")
-        /// Card / surface. Slightly warmer than pure black.
-        static let surface = Color(hex: "141416")
-        /// Elevated surface — modals, sheets, popovers.
-        static let surfaceElevated = Color(hex: "1C1C1F")
-        /// Light mode background. Cooler than #F5F5F5, no yellow cast.
-        static let backgroundLight = Color(hex: "F7F7F8")
-        /// Legacy alias kept for existing callsites.
-        static let greyWhite = Color(hex: "F7F7F8")
+        // Primary Palette
+        static var sageGreen: Color { accent }
+        static let chromeSilver = Color(hex: "C0C0C0")
+        static var glowingWhite: Color {
+            AppConfig.Defaults.isDarkMode() ? .white : Color(hex: "0B0B0C")
+        }
+        static var accent: Color {
+            Color(hex: AppConfig.Defaults.currentAccentHex())
+        }
 
-        // ── Text hierarchy ─────────────────────────────────────────
-        /// Primary text — not pure white, softer on the eye.
-        static let primaryText = Color.white.opacity(0.92)
-        /// Secondary / metadata — subtext, timestamps, counts.
-        static let secondaryText = Color.white.opacity(0.38)
-        /// Primary text on light backgrounds.
-        static let primaryTextLight = Color.black.opacity(0.88)
-
-        // ── Borders ────────────────────────────────────────────────
-        /// Whisper-thin border — barely visible, just enough depth.
-        static let borderDefault = Color.white.opacity(0.07)
-        /// Light mode border.
-        static let borderLight = Color.black.opacity(0.08)
-
-        // ── Accent system (all pass WCAG AA on #0B0B0C) ────────────
-        /// Sage — deeper, more confident. Replaces #B4C7B8.
-        static let sageGreen = Color(hex: "8DB99B")
-        /// Blue — strong, already correct.
-        static let blue = Color(hex: "6FA8FF")
-        /// Coral — warm, energetic.
-        static let coral = Color(hex: "FF8F6B")
-        /// Lavender — slightly more saturated.
-        static let lavender = Color(hex: "C4A8F5")
-
-        // ── Legacy palette (keep for existing callsites) ───────────
-        static let chromeSilver = Color(hex: "8A8A8E")   // muted silver, less bright
-        static let glowingWhite = Color.white.opacity(0.92)
-        static let darkGrey = Color(hex: "3A3A3A")
-        static let mediumGrey = Color(hex: "6B6B6B")
+        // Backgrounds
+        static var black: Color {
+            AppConfig.Defaults.isDarkMode() ? Color(hex: "0B0B0C") : Color(hex: "F5F5F5")
+        }
+        static var greyWhite: Color {
+            AppConfig.Defaults.isDarkMode() ? Color(hex: "F5F5F5") : Color(hex: "0B0B0C")
+        }
+        static var darkGrey: Color {
+            AppConfig.Defaults.isDarkMode() ? Color(hex: "3A3A3A") : Color(hex: "E5E5E5")
+        }
+        static var mediumGrey: Color {
+            AppConfig.Defaults.isDarkMode() ? Color(hex: "6B6B6B") : Color(hex: "B5B5B5")
+        }
 
         // ── Semantic colors ────────────────────────────────────────
         /// Wealthsimple green — trustworthy, not neon.
@@ -61,9 +43,7 @@ enum DesignSystem {
         static let warningColor = Color(hex: "F5A623")
         /// Danger / failure — unchanged.
         static let failedRed = Color(hex: "FF6B6B")
-        static let dangerColor = failedRed
-        /// Pending / in-flight — same as secondaryText, not alarming.
-        static let pendingColor = Color.white.opacity(0.38)
+        static var successGreen: Color { accent }
 
         // ── Opacity helpers ────────────────────────────────────────
         static func sage(_ opacity: Double) -> Color {

@@ -8,10 +8,25 @@
 import SwiftUI
 
 struct RestingView: View {
+    @ObservedObject var authManager: GoogleAuthManager
     @EnvironmentObject var router: NavigationRouter
     @EnvironmentObject var store: LedgerStore
 
     @State private var appeared = false
+    @State private var hasTriggeredInitialSync = false
+
+    private var isLoadingInitialAmount: Bool {
+        store.getTodayTotal() == 0
+            && !store.hasEverSynced
+            && isSyncing
+    }
+
+    private var isSyncing: Bool {
+        if case .syncing = store.syncStatus {
+            return true
+        }
+        return false
+    }
 
     var body: some View {
         ZStack {
@@ -32,6 +47,9 @@ struct RestingView: View {
                     )
                     .accessibilityLabel("Today's spending: \(formattedAmount(store.getTodayTotal()))")
                     .accessibilityAddTraits(.updatesFrequently)
+                } else if isLoadingInitialAmount {
+                    WaveLoadingAmount(size: .hero)
+                        .accessibilityLabel("Loading today's spending")
                 } else {
                     PlaceholderAmount(size: .hero)
                 }
@@ -54,18 +72,34 @@ struct RestingView: View {
             withAnimation(.easeOut(duration: 0.8).delay(0.2)) {
                 appeared = true
             }
+
+            guard !hasTriggeredInitialSync,
+                  store.transactions.isEmpty,
+                  !store.hasEverSynced else {
+                return
+            }
+
+            hasTriggeredInitialSync = true
+            Task {
+                _ = await store.syncFromGmail(
+                    gmailClient: GmailClient(authManager: authManager),
+                    parser: ReceiptParser(),
+                    fetchWindowDays: 30
+                )
+            }
         }
     }
 }
 
 private extension RestingView {
     func formattedAmount(_ cents: Int) -> String {
-        String(format: "$%.2f", Double(cents) / 100.0)
+        let symbol = AppConfig.Defaults.currentCurrencySymbol()
+        return String(format: "\(symbol)%.2f", Double(cents) / 100.0)
     }
 }
 
 #Preview {
-    RestingView()
+    RestingView(authManager: GoogleAuthManager())
         .environmentObject(NavigationRouter())
         .environmentObject(LedgerStore.shared)
 }

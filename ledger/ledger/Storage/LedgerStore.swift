@@ -35,6 +35,7 @@ final class LedgerStore: ObservableObject {
         static let schemaVersion = "storage_schema_version"
         static let pendingSync = "pending_sync"
         static let hasEverSynced = "has_ever_synced"
+        static let lastSuccessfulSyncAt = "last_successful_sync_at"
     }
 
     init(
@@ -144,6 +145,7 @@ final class LedgerStore: ObservableObject {
         defaults.set(0, forKey: Storage.schemaVersion)
         defaults.removeObject(forKey: Storage.pendingSync)
         defaults.removeObject(forKey: Storage.hasEverSynced)
+        defaults.removeObject(forKey: Storage.lastSuccessfulSyncAt)
 
         syncToWidget()
     }
@@ -283,13 +285,19 @@ final class LedgerStore: ObservableObject {
     func syncFromGmail(
         gmailClient: GmailClient,
         parser: ReceiptParser,
-        fetchWindowDays: Int = 1
+        fetchWindowDays: Int = 7
     ) async -> GmailSyncResult {
         lastSyncDependencies = (gmailClient, parser)
         syncStatus = .syncing
 
         do {
-            let (messages, fetchResult) = try await gmailClient.getRecentReceipts(fetchWindowDays: fetchWindowDays)
+            let now = Date()
+            let lastSuccessfulSync = userDefaults?.object(forKey: Storage.lastSuccessfulSyncAt) as? Date
+            let (messages, fetchResult) = try await gmailClient.getRecentReceipts(
+                fetchWindowDays: fetchWindowDays,
+                sinceDate: lastSuccessfulSync,
+                untilDate: now
+            )
 
             var parsedCount = 0
             var inserted = 0
@@ -311,7 +319,7 @@ final class LedgerStore: ObservableObject {
                 }
 
                 // Only add if confidence is above threshold
-                guard parsedReceipt.confidence > 0.3 else {
+                guard parsedReceipt.confidence >= 0.3 else {
                     skipped += 1
                     continue
                 }
@@ -336,6 +344,7 @@ final class LedgerStore: ObservableObject {
             inserted = addTransactions(newTransactions)
             userDefaults?.set(false, forKey: Storage.pendingSync)
             userDefaults?.set(true, forKey: Storage.hasEverSynced)
+            userDefaults?.set(now, forKey: Storage.lastSuccessfulSyncAt)
 
             let result = GmailSyncResult(
                 fetched: fetchResult.fetched,
@@ -351,7 +360,6 @@ final class LedgerStore: ObservableObject {
             if isNetworkError(error) {
                 userDefaults?.set(true, forKey: Storage.pendingSync)
             }
-            userDefaults?.set(true, forKey: Storage.hasEverSynced)
 
             syncStatus = .failed(error)
             return GmailSyncResult(

@@ -19,7 +19,6 @@ struct AmountText: View {
     
     private func formatAmount(_ cents: Int) -> String {
         let dollars = Double(cents) / 100.0
-        return String(format: "\(AppConfig.Defaults.currencySymbol)%.2f", dollars)
+        return String(format: "\(AppConfig.Defaults.currentCurrencySymbol())%.2f", dollars)
     }
 }
-

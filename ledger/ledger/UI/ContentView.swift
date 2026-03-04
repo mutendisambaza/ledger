@@ -32,7 +32,7 @@ struct ContentView: View {
                         .transition(.opacity)
 
                 case .resting:
-                    RestingView()
+                    RestingView(authManager: authManager)
                         .transition(.opacity)
 
                 case .home:

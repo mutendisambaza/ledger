@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct HomeView: View {
     @EnvironmentObject var store: LedgerStore
@@ -14,7 +15,9 @@ struct HomeView: View {
     @ObservedObject var authManager: GoogleAuthManager
 
     @StateObject private var periodManager = TimePeriodManager()
+    @StateObject private var spendLimitManager = SpendLimitManager()
     private let insightEngine = InsightEngine()
+    private let autoSyncTimer = Timer.publish(every: 600, on: .main, in: .common).autoconnect()
 
     @State private var showSettings = false
     @State private var hiddenTransactionIDs: Set<UUID> = []
@@ -28,6 +31,8 @@ struct HomeView: View {
     @State private var showFailureBanner = false
     @State private var failureMessage = ""
     @State private var showInitialSyncOverlay = false
+    @State private var selectedTopTab: HomeTopTab = .ledger
+    @Namespace private var topTabNamespace
 
     private var gmailClient: GmailClient {
         GmailClient(authManager: authManager)
@@ -125,7 +130,7 @@ struct HomeView: View {
 
             Task {
                 try? await Task.sleep(for: .seconds(1.5))
-                await syncFromGmail()
+                await syncFromGmail(fetchWindowDays: 30)
                 await MainActor.run {
                     showInitialSyncOverlay = false
                 }
@@ -147,12 +152,117 @@ struct HomeView: View {
         .onReceive(store.$syncStatus) { newStatus in
             handleSyncStatus(newStatus)
         }
+        .onReceive(autoSyncTimer) { _ in
+            guard authManager.isAuthenticated else { return }
+            Task {
+                await syncFromGmail(fetchWindowDays: 7)
+            }
+        }
     }
 
     private var mainContent: some View {
         VStack(spacing: DesignSystem.Spacing.md) {
             headerSection
+            topNavigationSection
+            tabContentSection
+        }
+    }
 
+    private var topNavigationSection: some View {
+        HStack(spacing: 8) {
+            ForEach(HomeTopTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.pageSlide) {
+                        selectedTopTab = tab
+                    }
+                } label: {
+                    if selectedTopTab == tab {
+                        Text(tab.title)
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(navPillTextColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(navPillColor)
+                                    .matchedGeometryEffect(id: "topNavPill", in: topTabNamespace)
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(navPillStrokeColor, lineWidth: 0.5)
+                            )
+                            .shadow(color: navPillColor.opacity(0.25), radius: 6, y: 2)
+                    } else {
+                        Circle()
+                            .fill(navPillColor)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, DesignSystem.Spacing.md)
+        .padding(.top, 2)
+    }
+
+    private var navPillColor: Color {
+        AppConfig.Defaults.isDarkMode()
+            ? DesignSystem.Colors.glow(0.2)
+            : Color.black.opacity(0.78)
+    }
+
+    private var navPillTextColor: Color {
+        AppConfig.Defaults.isDarkMode()
+            ? DesignSystem.Colors.glowingWhite
+            : .white
+    }
+
+    private var navPillStrokeColor: Color {
+        AppConfig.Defaults.isDarkMode()
+            ? DesignSystem.Colors.glow(0.28)
+            : Color.white.opacity(0.22)
+    }
+
+    @ViewBuilder
+    private var tabContentSection: some View {
+        Group {
+            switch selectedTopTab {
+            case .ledger:
+                ledgerTabSection
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            case .timeline:
+                timelineTabSection
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            case .goals:
+                goalsTabSection
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onEnded { value in
+                    guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                    let threshold: CGFloat = 40
+                    if value.translation.width < -threshold {
+                        selectAdjacentTab(direction: 1)
+                    } else if value.translation.width > threshold {
+                        selectAdjacentTab(direction: -1)
+                    }
+                }
+        )
+    }
+
+    private func selectAdjacentTab(direction: Int) {
+        let newIndex = max(0, min(HomeTopTab.allCases.count - 1, selectedTopTab.index + direction))
+        guard let newTab = HomeTopTab(index: newIndex), newTab != selectedTopTab else { return }
+        withAnimation(.pageSlide) {
+            selectedTopTab = newTab
+        }
+    }
+
+    private var ledgerTabSection: some View {
+        VStack(spacing: DesignSystem.Spacing.md) {
             TimePeriodToggle(periodManager: periodManager)
                 .padding(.horizontal, DesignSystem.Spacing.md)
 
@@ -179,11 +289,83 @@ struct HomeView: View {
         }
     }
 
+    private var timelineTabSection: some View {
+        VStack(spacing: DesignSystem.Spacing.md) {
+            GlassCard {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Text("Timeline")
+                        .font(DesignSystem.Typography.cardHeader)
+                        .foregroundColor(DesignSystem.Colors.glowingWhite)
+                    Text("Review spending patterns by day in your calendar timeline.")
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.chrome(0.8))
+                    GlassButton(
+                        "Open Calendar",
+                        icon: "calendar",
+                        style: .secondary,
+                        action: {
+                            router.showCalendar()
+                        }
+                    )
+                    .padding(.top, DesignSystem.Spacing.xxs)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.xl))
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            Spacer(minLength: DesignSystem.Spacing.xl)
+        }
+    }
+
+    private var goalsTabSection: some View {
+        let todayTotal = store.getTodayTotal()
+        let limit = max(spendLimitManager.dailyLimitCents, 1)
+        let progress = min(1.0, Double(todayTotal) / Double(limit))
+        let percent = Int((progress * 100).rounded())
+
+        return VStack(spacing: DesignSystem.Spacing.md) {
+            GlassCard {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Text("Daily Budget Goal")
+                        .font(DesignSystem.Typography.cardHeader)
+                        .foregroundColor(DesignSystem.Colors.glowingWhite)
+                    Text("\(percent)% used")
+                        .font(DesignSystem.Typography.sectionHeader)
+                        .foregroundColor(DesignSystem.Colors.glowingWhite)
+                    ProgressView(value: progress)
+                        .tint(DesignSystem.Colors.accent)
+                    Text("Used \(formattedAmount(todayTotal)) of \(spendLimitManager.formattedLimit())")
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.chrome(0.78))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.xl))
+            .padding(.horizontal, DesignSystem.Spacing.md)
+
+            GlassCard {
+                VStack(alignment: .leading, spacing: DesignSystem.Spacing.xs) {
+                    Text("Adjust Goal")
+                        .font(DesignSystem.Typography.bodyMedium)
+                        .foregroundColor(DesignSystem.Colors.glowingWhite)
+                    Text("Use Settings to update your daily budget and widget target.")
+                        .font(DesignSystem.Typography.caption)
+                        .foregroundColor(DesignSystem.Colors.chrome(0.78))
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.xl))
+            .padding(.horizontal, DesignSystem.Spacing.md)
+            Spacer(minLength: DesignSystem.Spacing.xl)
+        }
+    }
+
     private var headerSection: some View {
         HStack {
             Text("Ledger")
-                .font(DesignSystem.Typography.sectionHeader)
-                .foregroundColor(DesignSystem.Colors.primaryText)
+                .font(DesignSystem.Typography.bodyMedium)
+                .foregroundColor(DesignSystem.Colors.glowingWhite)
+                .glow(
+                    color: DesignSystem.Colors.glowingWhite,
+                    radius: DesignSystem.Effects.glowRadius
+                )
 
             Spacer()
 
@@ -232,66 +414,16 @@ struct HomeView: View {
             Text(periodManager.selectedPeriod.rawValue.lowercased())
                 .font(DesignSystem.Typography.caption)
                 .foregroundColor(DesignSystem.Colors.chrome(0.7))
-                .animation(.stateToggle, value: periodManager.selectedPeriod)
+
+            Text("Daily goal \(spendLimitManager.formattedLimit())")
+                .font(DesignSystem.Typography.caption)
+                .foregroundColor(DesignSystem.Colors.chrome(0.65))
         }
         .padding(.vertical, DesignSystem.Spacing.lg)
         .contentShape(Rectangle())
-        // Tap → toggle privacy mask
         .onTapGesture {
-            withAnimation(.stateToggle) {
-                isAmountHidden.toggle()
-            }
+            router.reset(to: .splash)
         }
-        // Swipe left → next period, swipe right → previous period
-        .gesture(
-            DragGesture(minimumDistance: 30, coordinateSpace: .local)
-                .onEnded { value in
-                    let isHorizontal = abs(value.translation.width) > abs(value.translation.height)
-                    guard isHorizontal else { return }
-                    if value.translation.width < 0 {
-                        advancePeriod()
-                    } else {
-                        retreatPeriod()
-                    }
-                }
-        )
-    }
-
-    private func advancePeriod() {
-        let cases = TimePeriod.allCases
-        guard let idx = cases.firstIndex(of: periodManager.selectedPeriod) else { return }
-        withAnimation(.stateToggle) {
-            periodManager.selectedPeriod = cases[(idx + 1) % cases.count]
-        }
-    }
-
-    private func retreatPeriod() {
-        let cases = TimePeriod.allCases
-        guard let idx = cases.firstIndex(of: periodManager.selectedPeriod) else { return }
-        withAnimation(.stateToggle) {
-            periodManager.selectedPeriod = cases[idx == 0 ? cases.count - 1 : idx - 1]
-        }
-    }
-
-    private var balancedToast: some View {
-        HStack(spacing: DesignSystem.Spacing.xxs) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(prefs.accent)
-            Text("Your Ledger is now Balanced")
-                .font(DesignSystem.Typography.captionMedium)
-                .foregroundColor(DesignSystem.Colors.primaryText)
-        }
-        .padding(.horizontal, DesignSystem.Spacing.sm)
-        .padding(.vertical, DesignSystem.Spacing.xs)
-        .background(
-            ZStack {
-                Capsule().fill(prefs.accent.opacity(0.12))
-                Capsule().strokeBorder(prefs.accent.opacity(0.30), lineWidth: DesignSystem.Effects.borderWidth)
-            }
-        )
-        .padding(.bottom, DesignSystem.Spacing.xl)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private var failureBanner: some View {
@@ -355,6 +487,7 @@ struct HomeView: View {
                     }
                     .padding(DesignSystem.Spacing.sm)
                 }
+                .clipShape(RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.xl))
                 .padding(.horizontal, DesignSystem.Spacing.md)
             }
         }
@@ -363,7 +496,7 @@ struct HomeView: View {
     private var syncSection: some View {
         VStack(spacing: DesignSystem.Spacing.sm) {
             GlassButton(
-                "Rebalance Ledger",
+                isSyncing ? "Rebalencing..." : "Rebalence",
                 icon: "arrow.clockwise",
                 style: .primary,
                 isLoading: isSyncing,
@@ -371,8 +504,13 @@ struct HomeView: View {
                 action: { Task { await syncFromGmail() } }
             )
             .padding(.horizontal, DesignSystem.Spacing.md)
-            .accessibilityLabel("Rebalance Ledger")
-            .accessibilityHint("Checks your inbox for new transactions")
+            .shadow(
+                color: isSyncing ? DesignSystem.Colors.sageGreen.opacity(0.65) : .clear,
+                radius: isSyncing ? 16 : 0
+            )
+            .animation(.easeInOut(duration: 0.25), value: isSyncing)
+            .accessibilityLabel("Sync receipts from Gmail")
+            .accessibilityHint("Checks your inbox for new receipts")
 
             if showSuccessToast {
                 InsightCard(
@@ -408,13 +546,18 @@ struct HomeView: View {
     }
 
     private func formattedAmount(_ cents: Int) -> String {
-        String(format: "$%.2f", Double(cents) / 100.0)
+        let symbol = AppConfig.Defaults.currentCurrencySymbol()
+        return String(format: "\(symbol)%.2f", Double(cents) / 100.0)
     }
 
     @MainActor
-    private func syncFromGmail() async {
+    private func syncFromGmail(fetchWindowDays: Int = 7) async {
         guard !isSyncing else { return }
-        _ = await store.syncFromGmail(gmailClient: gmailClient, parser: parser)
+        _ = await store.syncFromGmail(
+            gmailClient: gmailClient,
+            parser: parser,
+            fetchWindowDays: fetchWindowDays
+        )
     }
 
     private func handleSyncStatus(_ status: LedgerStore.SyncStatus) {
@@ -456,6 +599,37 @@ struct HomeView: View {
                 showFailureBanner = true
                 showSuccessToast = false
             }
+        }
+    }
+}
+
+enum HomeTopTab: CaseIterable, Hashable {
+    case ledger
+    case timeline
+    case goals
+
+    var title: String {
+        switch self {
+        case .ledger: return "Ledger"
+        case .timeline: return "Timeline"
+        case .goals: return "Goals"
+        }
+    }
+
+    var index: Int {
+        switch self {
+        case .ledger: return 0
+        case .timeline: return 1
+        case .goals: return 2
+        }
+    }
+
+    init?(index: Int) {
+        switch index {
+        case 0: self = .ledger
+        case 1: self = .timeline
+        case 2: self = .goals
+        default: return nil
         }
     }
 }

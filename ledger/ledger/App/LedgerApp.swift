@@ -8,8 +8,15 @@ import SwiftUI
 @main
 struct LedgerApp: App {
     @StateObject private var store = LedgerStore.shared
-    @StateObject private var prefs = UserPreferences()
-
+    @AppStorage(
+        AppConfig.Keys.selectedAccentHex,
+        store: UserDefaults(suiteName: AppConfig.suiteName)
+    ) private var selectedAccentHex: String = AppConfig.Defaults.defaultAccentHex
+    @AppStorage(
+        AppConfig.Keys.isDarkMode,
+        store: UserDefaults(suiteName: AppConfig.suiteName)
+    ) private var isDarkMode: Bool = true
+    
     init() {
         _ = SupabaseManager.shared.client
         LedgerStore.shared.syncToWidget()
@@ -19,8 +26,8 @@ struct LedgerApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
-                .environmentObject(prefs)
-                .preferredColorScheme(prefs.colorScheme)
+                .tint(Color(hex: selectedAccentHex))
+                .preferredColorScheme(isDarkMode ? .dark : .light)
         }
     }
 }

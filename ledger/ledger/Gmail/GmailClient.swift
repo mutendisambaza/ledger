@@ -87,12 +87,25 @@ final class GmailClient {
     /// - Parameters:
     ///   - fetchWindowDays: Number of days to search backward, clamped to 1...30.
     ///   - maxResults: Maximum number of messages to request from Gmail.
+    ///   - sinceDate: Optional lower bound for incremental sync.
+    ///   - untilDate: Optional upper bound for incremental sync.
     /// - Returns: A tuple of fetched messages and sync summary.
-    func getRecentReceipts(fetchWindowDays: Int = 1, maxResults: Int = 50) async throws -> ([GmailMessage], GmailSyncResult) {
+    func getRecentReceipts(
+        fetchWindowDays: Int = 1,
+        maxResults: Int = 50,
+        sinceDate: Date? = nil,
+        untilDate: Date = Date()
+    ) async throws -> ([GmailMessage], GmailSyncResult) {
         let window = min(max(fetchWindowDays, 1), 30)
-        let receiptQuery = """
-        newer_than:\(window)d subject:(receipt OR order OR invoice OR "your purchase" OR "payment confirmation" OR "thank you for your order")
-        """
+        let baseReceiptTerms = "(receipt OR order OR invoice OR \"your purchase\" OR \"payment confirmation\" OR \"thank you for your order\" OR \"order total\" OR \"charged to\")"
+        let receiptQuery: String
+        if let sinceDate, sinceDate < untilDate {
+            let afterEpoch = Int(sinceDate.timeIntervalSince1970)
+            let beforeEpoch = Int(untilDate.timeIntervalSince1970)
+            receiptQuery = "\(baseReceiptTerms) after:\(afterEpoch) before:\(beforeEpoch)"
+        } else {
+            receiptQuery = "newer_than:\(window)d \(baseReceiptTerms)"
+        }
 
         let messageRefs = try await listMessages(query: receiptQuery, maxResults: maxResults)
 

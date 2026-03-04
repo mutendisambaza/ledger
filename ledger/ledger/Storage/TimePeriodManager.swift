@@ -39,7 +39,14 @@ class TimePeriodManager: ObservableObject {
         // Calculate date range
         let calendar = Calendar.current
         let now = Date()
-        let startDate = calendar.date(byAdding: .day, value: -period.days, to: now) ?? now
+        let startOfToday = calendar.startOfDay(for: now)
+        let startDate: Date
+        switch period {
+        case .day:
+            startDate = startOfToday
+        case .twoDays, .week, .month:
+            startDate = calendar.date(byAdding: .day, value: -(period.days - 1), to: startOfToday) ?? startOfToday
+        }
 
         // Filter transactions
         let filtered = store.transactions.filter { transaction in

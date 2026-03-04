@@ -16,12 +16,32 @@ struct SettingsView: View {
     @State private var showClearConfirm = false
     @State private var limitText: String = ""
     @State private var appeared = false
+    @AppStorage(
+        AppConfig.Keys.selectedCurrencyCode,
+        store: UserDefaults(suiteName: AppConfig.suiteName)
+    ) private var selectedCurrencyCode: String = AppConfig.Defaults.currency
+    @AppStorage(
+        AppConfig.Keys.selectedAccentHex,
+        store: UserDefaults(suiteName: AppConfig.suiteName)
+    ) private var selectedAccentHex: String = AppConfig.Defaults.defaultAccentHex
+    @AppStorage(
+        AppConfig.Keys.isDarkMode,
+        store: UserDefaults(suiteName: AppConfig.suiteName)
+    ) private var isDarkMode: Bool = true
 
+    private let accentOptions: [(name: String, hex: String)] = [
+        ("Sage", "B4C7B8"),
+        ("Blue", "6FA8FF"),
+        ("Coral", "FF8F6B"),
+        ("Lavender", "D1B3FF")
+    ]
+    
     var body: some View {
         NavigationView {
             ZStack {
+                // Background
                 DesignSystem.Colors.black.ignoresSafeArea()
-
+                
                 List {
                     // ── Appearance ───────────────────────────────────
                     Section {
@@ -116,23 +136,23 @@ struct SettingsView: View {
                         if let email = authManager.userEmail {
                             HStack(spacing: DesignSystem.Spacing.sm) {
                                 Circle()
-                                    .fill(prefs.accent.opacity(0.12))
-                                    .frame(width: 36, height: 36)
+                                    .fill(DesignSystem.Colors.accent.opacity(0.2))
+                                    .frame(width: 40, height: 40)
                                     .overlay(
                                         Text(String(email.prefix(1)).uppercased())
-                                            .font(DesignSystem.Typography.bodyMedium)
-                                            .foregroundColor(prefs.accent)
+                                            .font(.headline)
+                                            .foregroundColor(DesignSystem.Colors.accent)
                                     )
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Connected")
-                                        .font(DesignSystem.Typography.micro)
-                                        .foregroundColor(DesignSystem.Colors.secondaryText)
+                                        .font(.caption)
+                                        .foregroundColor(DesignSystem.Colors.chrome(0.7))
                                     Text(email)
-                                        .font(DesignSystem.Typography.body)
-                                        .foregroundColor(DesignSystem.Colors.primaryText)
+                                        .font(.subheadline.monospaced())
+                                        .foregroundColor(DesignSystem.Colors.glowingWhite)
                                 }
                             }
-                            .listRowBackground(DesignSystem.Colors.surface)
+                            .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
                         }
 
                         Button(action: {
@@ -145,7 +165,7 @@ struct SettingsView: View {
                             }
                             .foregroundColor(DesignSystem.Colors.dangerColor)
                         }
-                        .listRowBackground(DesignSystem.Colors.surface)
+                        .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
                     } header: {
                         sectionHeader("Account")
                     }
@@ -159,30 +179,61 @@ struct SettingsView: View {
                             }
                             .foregroundColor(DesignSystem.Colors.dangerColor)
                         }
-                        .listRowBackground(DesignSystem.Colors.surface)
+                        .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
                     } header: {
                         sectionHeader("Data")
                     }
 
-                    // ── About ────────────────────────────────────────
+                    Section {
+                        Toggle("Dark Mode", isOn: $isDarkMode)
+                            .tint(DesignSystem.Colors.accent)
+                            .onChange(of: isDarkMode) { _, newValue in
+                                AppConfig.Defaults.setDarkMode(newValue)
+                            }
+                            .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
+
+                        Picker("Accent", selection: $selectedAccentHex) {
+                            ForEach(accentOptions, id: \.hex) { option in
+                                Text(option.name).tag(option.hex)
+                            }
+                        }
+                        .onChange(of: selectedAccentHex) { _, newValue in
+                            AppConfig.Defaults.setAccentHex(newValue)
+                        }
+                        .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
+
+                        Picker("Currency", selection: $selectedCurrencyCode) {
+                            ForEach(AppConfig.Defaults.supportedCurrencies, id: \.self) { code in
+                                Text(code).tag(code)
+                            }
+                        }
+                        .onChange(of: selectedCurrencyCode) { _, newValue in
+                            AppConfig.Defaults.setCurrencyCode(newValue)
+                        }
+                        .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
+                    } header: {
+                        Text("Appearance")
+                    }
+                    
+                    // About section
                     Section {
                         HStack {
                             Text("Ledger")
-                                .foregroundColor(DesignSystem.Colors.primaryText)
+                                .foregroundColor(DesignSystem.Colors.glowingWhite)
                             Spacer()
                             Text("by TAUR")
-                                .foregroundColor(DesignSystem.Colors.secondaryText)
+                                .foregroundColor(DesignSystem.Colors.chrome(0.7))
                         }
-                        .listRowBackground(DesignSystem.Colors.surface)
-
+                        .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
+                        
                         HStack {
                             Text("Version")
-                                .foregroundColor(DesignSystem.Colors.primaryText)
+                                .foregroundColor(DesignSystem.Colors.glowingWhite)
                             Spacer()
                             Text(appVersion)
-                                .foregroundColor(DesignSystem.Colors.secondaryText)
+                                .foregroundColor(DesignSystem.Colors.chrome(0.7))
                         }
-                        .listRowBackground(DesignSystem.Colors.surface)
+                        .listRowBackground(DesignSystem.Colors.darkGrey.opacity(0.35))
                     } header: {
                         sectionHeader("About")
                     }
@@ -218,82 +269,7 @@ struct SettingsView: View {
         .presentationBackground(DesignSystem.Colors.black)
     }
 
-    private func saveLimitFromText() {
-        guard let dollars = Double(limitText), dollars > 0 else { return }
-        limitManager.setLimitFromDollars(dollars)
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(DesignSystem.Typography.micro)
-            .foregroundColor(DesignSystem.Colors.secondaryText)
-    }
-
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-    }
-}
-
-// MARK: - AppearancePill
-
-private struct AppearancePill: View {
-    let mode: AppearanceMode
-    let isSelected: Bool
-    let accent: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(mode.label)
-                .font(DesignSystem.Typography.captionMedium)
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundColor(isSelected ? DesignSystem.Colors.black : DesignSystem.Colors.secondaryText)
-                .padding(.horizontal, DesignSystem.Spacing.sm)
-                .padding(.vertical, 7)
-                .background(
-                    Group {
-                        if isSelected {
-                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
-                                .fill(accent)
-                        } else {
-                            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.sm)
-                                .fill(DesignSystem.Colors.black)
-                        }
-                    }
-                )
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.stateToggle, value: isSelected)
-    }
-}
-
-// MARK: - AccentSwatch
-
-private struct AccentSwatch: View {
-    let option: AccentColorOption
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(option.color)
-                    .frame(width: 32, height: 32)
-
-                if isSelected {
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.9), lineWidth: 2)
-                        .frame(width: 32, height: 32)
-
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(DesignSystem.Colors.black)
-                }
-            }
-        }
-        .buttonStyle(PlainButtonStyle())
-        .animation(.stateToggle, value: isSelected)
     }
 }

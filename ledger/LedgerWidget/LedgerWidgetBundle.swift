@@ -12,5 +12,6 @@ import SwiftUI
 struct LedgerWidgetBundle: WidgetBundle {
     var body: some Widget {
         LedgerWidget()
+        BudgetUsageWidget()
     }
 }

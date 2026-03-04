@@ -20,31 +20,58 @@ struct GlassButton: View {
     /// Text shown while isLoading is true.
     var loadingTitle: String?
 
-    @State private var isPressed = false
-    @EnvironmentObject var prefs: UserPreferences
+    @Environment(\.isEnabled) private var isEnabled
 
     enum ButtonStyle {
         case primary
         case secondary
         case minimal
 
-        var backgroundColor: Color {
+        func backgroundColor(isEnabled: Bool) -> Color {
             switch self {
-            case .primary:             return DesignSystem.Colors.surface
-            case .secondary, .minimal: return DesignSystem.Colors.surface
+            case .primary:
+                return isEnabled ? DesignSystem.Colors.accent : .clear
+            case .secondary:
+                return isEnabled ? DesignSystem.Colors.chrome(0.1) : .clear
+            case .minimal:
+                return Color.clear
+            }
+        }
+
+        func borderColor(isEnabled: Bool) -> Color {
+            switch self {
+            case .primary:
+                return DesignSystem.Colors.accent.opacity(isEnabled ? 1 : 0.9)
+            case .secondary:
+                return DesignSystem.Colors.chromeSilver.opacity(isEnabled ? 1 : 0.9)
+            case .minimal:
+                return DesignSystem.Colors.glow(0.2)
+            }
+        }
+
+        func glowColor(isEnabled: Bool) -> Color {
+            switch self {
+            case .primary:
+                return isEnabled ? DesignSystem.Colors.accent : .clear
+            case .secondary, .minimal:
+                return DesignSystem.Colors.glowingWhite
+            }
+        }
+
+        func foregroundColor(isEnabled: Bool) -> Color {
+            switch self {
+            case .primary:
+                return isEnabled ? DesignSystem.Colors.black : DesignSystem.Colors.accent
+            case .secondary:
+                return isEnabled ? DesignSystem.Colors.glowingWhite : DesignSystem.Colors.chromeSilver
+            case .minimal:
+                return DesignSystem.Colors.glowingWhite
             }
         }
     }
 
     var body: some View {
-        Button(action: {
-            guard !isLoading else { return }
-            withAnimation(.stateToggle) { isPressed = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.10) {
-                withAnimation(.stateToggle) { isPressed = false }
-                action()
-            }
-        }) {
+        Button(action: action) {
             HStack(spacing: DesignSystem.Spacing.xs) {
                 if isLoading {
                     ProgressView()
@@ -60,40 +87,36 @@ struct GlassButton: View {
                     .font(isCompact ? DesignSystem.Typography.captionMedium : DesignSystem.Typography.bodyMedium)
                     .fontWeight(.medium)
             }
-            .foregroundColor(style == .primary ? prefs.accent : DesignSystem.Colors.secondaryText)
+            .foregroundColor(style.foregroundColor(isEnabled: isEnabled))
             .padding(.horizontal, isCompact ? DesignSystem.Spacing.sm : DesignSystem.Spacing.md)
-            .padding(.vertical, isCompact ? DesignSystem.Spacing.xxs : DesignSystem.Spacing.sm)
-            .background(buttonBackground)
-            .scaleEffect((!isLoading && isPressed) ? 0.97 : 1.0)
-            .shadow(
-                color: prefs.accent.opacity((!isLoading && isPressed) ? 0.20 : 0),
-                radius: 12
+            .padding(.vertical, isCompact ? DesignSystem.Spacing.xs : DesignSystem.Spacing.sm)
+            .background(
+                ZStack {
+                    // Glass background
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
+                        .fill(style.backgroundColor(isEnabled: isEnabled))
+                        .background(.ultraThinMaterial)
+
+                    // Border
+                    RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.lg)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [
+                                    style.borderColor(isEnabled: isEnabled).opacity(0.9),
+                                    style.borderColor(isEnabled: isEnabled).opacity(0.65)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                }
             )
+            .glow(color: style.glowColor(isEnabled: isEnabled), radius: 10, intensity: 0.28)
+            .chromeEffect(animated: false)
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(isLoading)
-        .animation(.stateToggle, value: isPressed)
-        .animation(.stateToggle, value: isLoading)
-    }
-
-    private var buttonBackground: some View {
-        let borderColor: Color = style == .primary
-            ? prefs.accent.opacity(0.28)
-            : DesignSystem.Colors.borderDefault
-
-        return ZStack {
-            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                .fill(style.backgroundColor)
-            RoundedRectangle(cornerRadius: DesignSystem.CornerRadius.md)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [borderColor, borderColor.opacity(0.5)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: DesignSystem.Effects.borderWidth
-                )
-        }
+        .animation(.easeInOut(duration: 0.22), value: isEnabled)
     }
 }
 
